@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+*.local
+
+# Compiled WebAssembly artifacts (CI rebuilds these from wasm/assembly)
+public/wasm/*.wasm
+public/wasm/*.wat
+public/wasm/*.js
+wasm/build/
+
+# Tooling caches / logs
+.vite/
+*.log
+npm-debug.log*
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+coverage/

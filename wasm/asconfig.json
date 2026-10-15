@@ -1,0 +1,22 @@
+{
+  "targets": {
+    "release": {
+      "outFile": "../public/wasm/sim.wasm",
+      "textFile": "./build/sim.wat",
+      "optimize": 3,
+      "shrinkLevel": 2,
+      "converge": true,
+      "noAssert": true
+    },
+    "debug": {
+      "outFile": "./build/sim.debug.wasm",
+      "textFile": "./build/sim.debug.wat",
+      "debug": true
+    }
+  },
+  "options": {
+    "exportRuntime": true,
+    "runtime": "incremental",
+    "memoryBase": 1048576
+  }
+}

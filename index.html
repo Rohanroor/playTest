@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0b1024" />
+    <meta
+      name="description"
+      content="ASCENSION - an infinitely scrolling 2.5D hot air balloon game with normal-mapped pixel art, volumetric weather and a WebAssembly simulation core."
+    />
+    <title>ASCENSION — a balloon odyssey</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='13' r='10' fill='%23e2593f'/%3E%3Cpath d='M11 22h10l-2 6h-6z' fill='%237a4a2b'/%3E%3C/svg%3E" />
+    <style>
+      :root {
+        color-scheme: dark;
+        --boot-bg: #070b18;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: var(--boot-bg);
+        font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+        -webkit-font-smoothing: antialiased;
+        overscroll-behavior: none;
+        touch-action: none;
+      }
+      #app {
+        position: fixed;
+        inset: 0;
+      }
+      canvas#game {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+        cursor: default;
+      }
+      /* Boot / diagnostics overlay. Fades out once the core is resident. */
+      #boot {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        color: #cfe0ff;
+        background: radial-gradient(120% 90% at 50% 20%, #16224a 0%, #070b18 70%);
+        transition: opacity 0.7s ease;
+        z-index: 10;
+        text-align: center;
+        padding: 24px;
+      }
+      #boot.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #boot h1 {
+        font-size: clamp(20px, 4vw, 34px);
+        letter-spacing: 0.32em;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: #ffd9a8;
+        text-shadow: 0 0 22px rgba(255, 150, 80, 0.35);
+      }
+      #boot p {
+        font-size: 12px;
+        letter-spacing: 0.14em;
+        opacity: 0.75;
+        max-width: 46ch;
+        line-height: 1.7;
+      }
+      #bar {
+        width: min(320px, 68vw);
+        height: 4px;
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      #bar > i {
+        display: block;
+        height: 100%;
+        width: 12%;
+        background: linear-gradient(90deg, #ffb15c, #ff6a5e);
+        transition: width 0.35s ease;
+      }
+      #boot.error h1 {
+        color: #ff8f7a;
+      }
+      #boot pre {
+        font-size: 11px;
+        color: #ff9d8a;
+        max-width: 76ch;
+        white-space: pre-wrap;
+        line-height: 1.6;
+        text-align: left;
+      }
+      /* Dev HUD (toggle with ` or ?hud=1) */
+      #hud {
+        position: absolute;
+        left: 10px;
+        bottom: 10px;
+        z-index: 5;
+        font-size: 11px;
+        line-height: 1.55;
+        color: #9fe8c0;
+        background: rgba(4, 10, 18, 0.62);
+        border: 1px solid rgba(120, 255, 190, 0.18);
+        border-radius: 6px;
+        padding: 8px 10px;
+        pointer-events: none;
+        display: none;
+        white-space: pre;
+        backdrop-filter: blur(2px);
+      }
+      #hud.on {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game" aria-label="Ascension game canvas" role="img"></canvas>
+      <div id="hud"></div>
+      <div id="boot">
+        <h1>Ascension</h1>
+        <p id="boot-msg">Waking the simulation core…</p>
+        <div id="bar"><i id="bar-fill"></i></div>
+        <pre id="boot-err" hidden></pre>
+      </div>
+    </div>
+    <noscript>
+      <div id="boot">
+        <h1>Ascension</h1>
+        <p>
+          This game runs entirely in your browser and needs JavaScript (and WebGL2) enabled.
+          Nothing is uploaded: the world is generated, simulated and rendered locally.
+        </p>
+      </div>
+    </noscript>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
