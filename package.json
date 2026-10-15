@@ -1,0 +1,24 @@
+{
+  "name": "ascension-replaced",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "ASCENSION // The Replaced Look - an infinitely scrolling 2.5D hot air balloon game with a WebAssembly simulation core.",
+  "scripts": {
+    "wasm": "node wasm/build.mjs",
+    "wasm:watch": "node wasm/build.mjs --watch",
+    "predev": "node wasm/build.mjs",
+    "dev": "vite --host 0.0.0.0 --port 5173",
+    "prebuild": "node wasm/build.mjs",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview --host 0.0.0.0 --port 4173",
+    "verify": "node tools/verify.mjs",
+    "ci": "npm run wasm && npm run typecheck && npm run build && npm run verify"
+  },
+  "devDependencies": {
+    "assemblyscript": "^0.28.20",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.9"
+  }
+}
