@@ -292,10 +292,20 @@ export class ParallaxManager {
 }
 
 /**
- * How many internal pixels one atlas pixel should occupy at scale 1. Chosen so
- * the balloon (80 atlas px tall) reads at ~20% of a 300px-tall internal frame.
+ * How many internal pixels one atlas pixel occupies at scale 1.
+ *
+ * 1.0 is the only value that keeps pixel art honest: the scene renders at the
+ * internal resolution (~512x288) and is upscaled by an integer factor with
+ * NEAREST, so any other density makes an atlas pixel land on a fractional
+ * internal pixel - uneven pixel widths on every diagonal edge, and detail that
+ * shimmer as sprites move.
+ *
+ * It also ties the art to the simulation: at 1.0 the 58px-wide envelope matches
+ * the balloon's 0.062-world (32px) hit radius, so what the player sees is what
+ * the collision system tests, and the fairness corridor measured in
+ * `wasm/assembly/chunks.ts` is exactly the gap the art shows.
  */
-export const PIXEL_DENSITY = 1.45;
+export const PIXEL_DENSITY = 1.0;
 
 function clamp01(v: number): number {
   return v < 0 ? 0 : v > 1 ? 1 : v;

@@ -565,7 +565,7 @@ export class Game {
     // The traveler, standing by the post.
     if (!this.player.ropeIsCut || camera.scrollY < 0.5) {
       const trav = this.atlas.region("traveler");
-      const hh = (trav.h * PIXEL_DENSITY * 1.45) / ppu;
+      const hh = (trav.h * PIXEL_DENSITY * 1.45) / ppu; // traveler drawn a touch larger than native
       const tx = this.player.tether.x + 0.075;
       const ty = y + hh * 0.5 - 0.004;
       batch.push(trav, tx, ty, hh * (trav.w / trav.h), hh, 0, tint, tint, tint, 1, 0.1 + night * 0.3, 1.2, 0.35, 0, false);

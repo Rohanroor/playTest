@@ -643,7 +643,8 @@ async function loadGame() {
       contents:
         'export { Game } from "./src/flow/Game";\n' +
         'export { SimCore } from "./src/sim/SimCore";\n' +
-        'export { METRES_PER_WORLD_UNIT } from "./src/systems/WeatherTimeManager";\n',
+        'export { METRES_PER_WORLD_UNIT } from "./src/systems/WeatherTimeManager";\n' +
+        'export { PIXEL_DENSITY } from "./src/systems/ParallaxManager";\n',
       resolveDir: ROOT,
       loader: "ts",
       sourcefile: "headless-entry.ts",
@@ -1014,6 +1015,31 @@ const traceC = await playRun(90211, 900);
 check("a different seed plays a different world", traceC.some((line, i) => line !== traceA[i]));
 const lastSample = traceA[traceA.length - 1].split(",");
 check("the scripted run really played", Number(lastSample[0]) > 50 && Number(lastSample[3]) > 2, `(altitude ${Number(lastSample[0]).toFixed(0)} m, ${lastSample[3]} chunks, lives ${lastSample[6]})`);
+
+section("scene report");
+// Informational: the numeric scale of what the renderer was asked to draw. A
+// sprite an order of magnitude out would still pass every check above.
+const cam = game.camera;
+const ppu = cam.pixelsPerWorldUnit;
+const px = (worldUnits) => `${(worldUnits * ppu).toFixed(0)}px`;
+const balloonRegion = game.atlas.region(`balloon_${game.player.variant}`);
+const bw = (balloonRegion.w * mod.PIXEL_DENSITY) / ppu;
+const bh = (balloonRegion.h * mod.PIXEL_DENSITY) / ppu;
+const live = game.gen.obstacles.items.filter((o) => o.active);
+const sizes = live.map((o) => Math.max(o.w, o.h));
+const report = (label, value) => console.log(`  ${label.padEnd(30)} ${value}`);
+report("internal resolution", `${cam.internalW}x${cam.internalH} (pixel scale ${cam.pixelScale}, framebuffer ${cam.fbWidth}x${cam.fbHeight})`);
+report("world viewport", `1.000 x ${cam.viewH.toFixed(3)} units, ${ppu.toFixed(0)} px per world unit`);
+report("balloon", `${balloonRegion.w}x${balloonRegion.h} atlas px -> ${bw.toFixed(3)}x${bh.toFixed(3)} world = ${px(bw)}x${px(bh)} (${((bh / cam.viewH) * 100).toFixed(0)}% of screen height)`);
+report("hit radius", `${game.player.HIT_RADIUS ?? 0.062} world = ${px(0.062)} (forgiving vs ${px(bw)} wide art)`);
+report("anchor", `y=${game.player.anchorY.toFixed(3)} of ${cam.viewH.toFixed(3)} (${((game.player.anchorY / cam.viewH) * 100).toFixed(0)}% down)`);
+report("obstacles live", `${live.length}${sizes.length ? `, ${Math.min(...sizes).toFixed(3)}-${Math.max(...sizes).toFixed(3)} world = ${px(Math.min(...sizes))}-${px(Math.max(...sizes))}` : ""}`);
+report("decor live", `${game.parallax.liveDecor()} pooled + ${game.parallax.bandCount ?? 4} far bands`);
+report("particles", `${game.particles.drawn} drawn of ${game.sim.particleCount} live (cap ${game.sim.particleCapacity})`);
+report("weather", `${game.weather.stateName} (blend ${game.weather.stateBlend.toFixed(2)}), wind ${game.weather.windForce.toFixed(2)}, flash ${game.weather.flash.toFixed(3)}`);
+report("time of day", `phase ${game.weather.dayPhase.toFixed(3)} = ${game.weather.clockLabel}`);
+report("draw calls / frame", `${(rec.draws.length / Math.max(1, rec.frame)).toFixed(1)} (max ${rec.maxInstances} instances in one call)`);
+report("atlas", `${game.atlas.names.length} regions, ${rec.textures} GPU textures`);
 
 console.log(`\n${failures === 0 ? "PASS" : "FAIL"}  ${checks - failures}/${checks} headless checks passed (${rec.frame} frames)`);
 process.exit(failures === 0 ? 0 : 1);
