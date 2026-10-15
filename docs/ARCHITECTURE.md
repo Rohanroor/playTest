@@ -192,7 +192,7 @@ clone produces byte-identical art.
 npm run wasm            # asc → public/wasm/sim.wasm (~19.5 KB, -O3, converged)
 npm run typecheck       # tsc --noEmit (strict)
 npm run build           # vite build → dist/ (~40 KB gzipped, zero binary assets)
-npm run verify          # wasm invariants + headless art bake (39 checks)
+npm run verify          # wasm invariants + GLSL lint + headless art bake (48 checks)
 npm run test:headless   # play the real game against a mock WebGL2 (60 checks)
 npm run ci              # all of the above
 ```
@@ -213,7 +213,17 @@ esbuild binary Vite already ships, imported from a data URL, booted and played:
 title → launch → play → pause → gameover → restart, plus a 40 s unattended soak
 and two seeded runs diffed against each other.
 
-What that buys, beyond "it does not throw":
+Shader compilation cannot be checked without a driver, so `tools/shadercheck.mjs`
+lints the GLSL textually instead: `#version 300 es` first, float precision in
+every fragment shader, no WebGL1 leftovers (`gl_FragColor`, `texture2D`,
+`varying`, `attribute`), balanced braces, every `uXxx` identifier declared as a
+uniform, every varying a fragment shader reads written by the vertex shader it is
+paired with, and the instanced attribute layout cross-checked against
+`SpriteBatch`'s `vertexAttribPointer` calls (locations 0-6 must tile the 18-float
+instance struct exactly). A truncated template literal or a renamed varying is
+caught in CI rather than as a black screen.
+
+What the play-through buys, beyond "it does not throw":
 
 - **ABI drift** — every export declared by `SimExports` is checked against the
   binary, and `layoutVersion()` is asserted at boot.

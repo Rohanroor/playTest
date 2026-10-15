@@ -225,6 +225,15 @@ if (existsSync(join(root, "dist"))) {
   check("dist contains wasm", existsSync(join(root, "dist", "wasm", "sim.wasm")));
 }
 
+// --- GLSL lint (no driver in CI, so catch the mechanical failures) ----------
+console.log("\n[shaders]");
+try {
+  const { runShaderChecks } = await import("./shadercheck.mjs");
+  await runShaderChecks({ check, root });
+} catch (err) {
+  check("shader lint runs", false, `(${err instanceof Error ? err.message : String(err)})`);
+}
+
 // --- art pipeline (baked headlessly: sprites, normals, atlas, typeface) -----
 console.log("\n[art]");
 try {

@@ -194,14 +194,17 @@ tools/
 
 There is no browser in CI, so the game is verified three ways in Node instead:
 
-| harness | what it proves |
-| --- | --- |
-| `npm run verify` | the WASM core: 400 chunks are flood-fill survivable, pools never overflow, weather visits all four states, lightning/thunder fire, particles stay finite, **and** cosmetic churn cannot re-author a seeded world |
-| `npm run verify:art` | the generated art: the atlas bakes, every sprite name / entity id / bitmap-font glyph the code asks for actually exists, normal maps carry relief, 16 sprites glow |
-| `npm run test:headless` | the assembled game: it boots, the ABI matches the binary, title → launch → play → pause → gameover → restart all work, steering and wind fight each other correctly, collisions cost exactly one life, a 40 s soak leaks nothing (WASM memory flat, zero dropped spawns), no NaN ever reaches a vertex buffer or a uniform, every uniform name exists in the shader it is set on, and two runs of one seed produce identical traces |
+| harness | checks | what it proves |
+| --- | --- | --- |
+| `npm run verify` | 48 | the WASM core (400 chunks flood-fill survivable, pools never overflow, all four weather states, lightning/thunder, particles finite, cosmetic churn cannot re-author a seeded world), the **GLSL lint** (no WebGL1 leftovers, varyings written by their vertex shader, every `uXxx` declared, the instanced attribute layout tiling to exactly 18 floats), and the **art bake** (atlas packs, every sprite name / entity id / glyph resolves, normals carry relief) |
+| `npm run verify:shaders` | 9 | the GLSL lint on its own |
+| `npm run verify:art` | 10 | the art bake on its own |
+| `npm run test:headless` | 60 | the assembled game: it boots, the ABI matches the binary, title → launch → play → pause → gameover → restart all work, steering fights storm wind correctly, collisions cost exactly one life, a 40 s soak leaks nothing (WASM memory flat, zero dropped spawns), no NaN ever reaches a vertex buffer or a uniform, every uniform name exists in the shader it is set on, and two runs of one seed produce identical traces |
 
-Together that is 109 automated checks; `npm run ci` runs all of them plus
-typecheck and the production build.
+Together that is **108 automated checks**; `npm run ci` runs all of them plus
+typecheck and the production build. No browser is involved — see
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#testing-without-a-browser) for how
+the mock WebGL2 harness works and what it cannot prove.
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the data-flow diagram,
 the frame budget and the WASM ABI.

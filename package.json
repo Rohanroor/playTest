@@ -15,6 +15,7 @@
     "preview": "vite preview --host 0.0.0.0 --port 4173",
     "verify": "node tools/verify.mjs",
     "verify:art": "node tools/artcheck.mjs",
+    "verify:shaders": "node tools/shadercheck.mjs",
     "test:headless": "node tools/headless.mjs",
     "ci": "npm run wasm && npm run typecheck && npm run build && npm run verify && npm run test:headless"
   },
