@@ -167,14 +167,21 @@ void main() {
     lit += (base * lndl + uLightColor[i] * lsh * 0.35) * uLightColor[i] * atten;
   }
 
-  // Emission (authored in the material alpha channel) -> straight into bloom.
-  lit += base * glow * (0.35 + vParams.x * 2.4);
-
   // Aerial perspective: distant parallax layers sink into the fog colour.
   float haze = clamp(aerial * uFogDensity, 0.0, 0.92);
   lit = mix(lit, uFogColor * (0.35 + 0.65 * max(max(lit.r, lit.g), lit.b) * 2.0), haze);
 
-  outColor = vec4(lit * alpha, alpha);
+  // Emission is authored in the material alpha channel and goes straight to HDR,
+  // so lantern glass, flame and glow motes drive the bloom pass.
+  vec3 emiss = base * glow * (0.35 + vParams.x * 2.4);
+
+  // Instance convention: emissive >= 1.0 means *pure additive*. With
+  // premultiplied blending, alpha 0 + colour is additive and the framebuffer
+  // alpha stays 1, so glows batch with ordinary pixel art in one draw call.
+  float additive = step(1.0, vParams.x);
+  vec3 addRgb = base * (0.1 + glow * (0.55 + vParams.x * 2.2)) * alpha;
+  vec3 rgb = mix((lit + emiss) * alpha, addRgb, additive);
+  outColor = vec4(rgb, mix(alpha, 0.0, additive));
 }`;
 
 // --- Sky -------------------------------------------------------------------

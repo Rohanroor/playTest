@@ -39,7 +39,7 @@ const C = {
 
 // --- generic helpers -------------------------------------------------------
 
-function scanlineFill(pc: PixelCanvas, pts: [number, number][], fill: (x: number, y: number) => void): void {
+function scanlineFill(_pc: PixelCanvas, pts: [number, number][], fill: (x: number, y: number) => void): void {
   let minY = Infinity;
   let maxY = -Infinity;
   for (const [, y] of pts) {

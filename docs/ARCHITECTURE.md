@@ -13,9 +13,24 @@ systems dominate the per-frame cost and are pure arithmetic — procedural chunk
 generation, weather/time-of-day, and a few thousand particles. Both were moved
 into a compiled module:
 
-- **Determinism.** A seeded `xorshift32` + hashed value noise means chunk *N* is
-  identical for a given seed, on every machine and every run. That is what makes
-  the fairness harness in `tools/verify.mjs` meaningful.
+- **Determinism.** Two seeded `xorshift32` streams + hashed value noise mean
+  chunk *N* is identical for a given seed, on every machine and every run. That
+  is what makes the fairness harness in `tools/verify.mjs` meaningful.
+
+  The split matters. A single stream would let *cosmetic* churn re-author the
+  level: how many particles a frame emits depends on frame pacing and on
+  host-side dice, so draining that stream shifts every later chunk. Therefore:
+
+  | stream | who drains it | exported as |
+  | --- | --- | --- |
+  | **world** | chunk authoring, weather timing, lightning scheduling — fixed-timestep code only | `simRandom()` |
+  | **fx** | particle jitter, burst velocities, band decor, host cosmetics (`src/core/Random.ts`) | `simFxRandom()` |
+
+  Both are seeded from one `seedRng(seed)` with decorrelated mix constants, and
+  the host never calls `Math.random()` for anything that reaches the screen
+  (audio noise buffers excepted on purpose). Result: `?seed=1234` replays a run
+  bit-for-bit, visuals included — asserted by `tools/headless.mjs`, which boots
+  the game twice and diffs 150 sampled frames.
 - **Zero-copy boundary.** The module exposes raw pointers into linear memory;
   the host wraps them in `Float32Array` views and reads simulation state without
   marshalling or allocation (`src/sim/SimCore.ts`).
@@ -40,7 +55,8 @@ instead of rendering garbage.
 | `simParticlesStep(dt, view, weather…, scroll, lean, lightning, night)` | integrate + emit particles |
 | `simEmitBurst(x, y, count, type, spread, speed, life, size)` | one-shot bursts (impacts, rope snap, burner) |
 | `weatherPtr` / `obstaclePtr` / `decorPtr` / `particlePtr` | pointers for zero-copy views |
-| `simNoise2` / `simFbm2` / `simRandom` | host access to the same noise family |
+| `simNoise2` / `simFbm2` | host access to the same noise family |
+| `simRandom` / `simFxRandom` | the world and fx dice (see §1) |
 
 ### Memory layout
 
@@ -173,14 +189,47 @@ clone produces byte-identical art.
 ## 8. Build & CI
 
 ```bash
-npm run wasm        # asc → public/wasm/sim.wasm (~19 KB, -O3, converged)
-npm run typecheck   # tsc --noEmit (strict)
-npm run build       # vite build → dist/
-npm run verify      # instantiate the wasm in Node and assert invariants
-npm run ci          # all of the above
+npm run wasm            # asc → public/wasm/sim.wasm (~19.5 KB, -O3, converged)
+npm run typecheck       # tsc --noEmit (strict)
+npm run build           # vite build → dist/ (~40 KB gzipped, zero binary assets)
+npm run verify          # wasm invariants + headless art bake (39 checks)
+npm run test:headless   # play the real game against a mock WebGL2 (60 checks)
+npm run ci              # all of the above
 ```
 
 `.github/workflows/ci.yml` runs that chain on every push/PR and deploys `dist/`
 to GitHub Pages from `main`. The compiled `.wasm` is deliberately **not**
 committed — CI rebuilds it from `wasm/assembly`, so the artifact can never drift
 from the source.
+
+### Testing without a browser
+
+CI has no browser, and a black screen is the one failure mode a typechecker
+cannot see. `tools/headless.mjs` therefore installs a mock DOM (window,
+document, canvas, `localStorage`, rAF, a fake clock, a Proxy-based `AudioContext`)
+and a **Proxy-based WebGL2 context** that is permissive about unknown calls but
+records everything the renderer does. The real `Game` class is bundled with the
+esbuild binary Vite already ships, imported from a data URL, booted and played:
+title → launch → play → pause → gameover → restart, plus a 40 s unattended soak
+and two seeded runs diffed against each other.
+
+What that buys, beyond "it does not throw":
+
+- **ABI drift** — every export declared by `SimExports` is checked against the
+  binary, and `layoutVersion()` is asserted at boot.
+- **NaN hygiene** — every `bufferData`/`bufferSubData` upload and every uniform
+  value is validated, so a bad matrix or an off-screen sprite cannot silently
+  poison a frame (~116 M floats checked per run).
+- **Shader contract** — every uniform name the host looks up must appear in the
+  source of the program it is looked up on. This caught a dead `uSrc` on the fog
+  pass, which real GL would have answered with `null` and no complaint.
+- **Leaks** — WASM linear memory must not grow, no pool may exhaust
+  (`droppedSpawns === 0`), and live counts must stay inside capacity.
+- **Gameplay invariants** — collisions cost exactly one life, the death linger
+  ends the run, the score is banked, restart zeroes altitude and refills lives,
+  and the player retains enough lateral authority to fight storm wind.
+
+The mock is intentionally *not* a GL implementation: shader compilation is
+stubbed to succeed, so GLSL syntax is still only proven by a real driver. The
+`GL.annotate()` helper exists for that case — it prints the offending GLSL line
+into the boot overlay (`#boot-err`) where a player can read it.

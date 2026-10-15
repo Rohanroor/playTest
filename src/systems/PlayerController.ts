@@ -18,6 +18,7 @@ import type { Camera } from "../render/Camera";
 import type { SpriteBatch } from "../render/SpriteBatch";
 import type { Atlas } from "../art/Atlas";
 import type { SimCore } from "../sim/SimCore";
+import { hostRng } from "../core/Random";
 import { PARTICLE, W } from "../sim/layout";
 
 export type PlayerPhase = "tethered" | "launching" | "flying" | "falling";
@@ -247,16 +248,16 @@ export class PlayerController {
 
   private emitBurner(dt: number): void {
     if (this.burner < 0.25) return;
-    if (Math.random() < dt * (10 + this.burner * 46)) {
+    if (hostRng.chance(dt * (10 + this.burner * 46))) {
       this.sim.emitBurst(
-        this.x + (Math.random() - 0.5) * 0.012,
+        this.x + hostRng.range(-0.5, 0.5) * 0.012,
         this.y + 0.02,
         1,
         PARTICLE.EMBER,
         0.4,
         0.05 + this.burner * 0.12,
-        0.5 + Math.random() * 0.6,
-        0.004 + Math.random() * 0.004,
+        0.5 + hostRng.next() * 0.6,
+        0.004 + hostRng.next() * 0.004,
       );
     }
   }

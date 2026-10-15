@@ -83,11 +83,22 @@ export class ProceduralGenManager {
     }
 
     this.updateObstacles(dt, scrollDelta, viewH);
+    this.updateDecorOnly(dt, scrollDelta, viewH);
+  }
+
+  /**
+   * Animate pooled decor without streaming chunks. Used on the title screen,
+   * where the landscape is deliberately static but birds still cross the frame.
+   */
+  updateDecorOnly(dt: number, scrollDelta: number, viewH: number): void {
     this.updateDecor(dt, scrollDelta, viewH);
   }
 
   private spawnChunk(chunkTop: number): void {
+    // The core authors chunk N from its index (grace, difficulty ramp and the
+    // corridor phase all derive from it), so the counter must advance.
     this.sim.generateChunk(this.chunkIndex, this.difficulty);
+    this.chunkIndex++;
     const obstacles = this.sim.obstacles;
     const os = this.sim.obstacleStride;
     const n = this.sim.obstacleCount;
@@ -168,11 +179,11 @@ export class ProceduralGenManager {
       item.tint = tint;
       item.spin = decor[b + D.SPIN];
       item.layer = decor[b + D.LAYER];
-      item.flip = this.sim.random() < 0.5;
+      item.flip = this.sim.fxRandom() < 0.5;
       item.alpha = 1;
       // Birds drift across the frame with the wind.
-      item.vx = type === DECOR.BIRD ? (this.sim.random() - 0.5) * 0.16 + decor[b + D.SPIN] * 0.2 : 0;
-      item.anim = this.sim.random() * 6.28;
+      item.vx = type === DECOR.BIRD ? (this.sim.fxRandom() - 0.5) * 0.16 + decor[b + D.SPIN] * 0.2 : 0;
+      item.anim = this.sim.fxRandom() * 6.28;
     }
   }
 

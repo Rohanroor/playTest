@@ -14,7 +14,9 @@
     "typecheck": "tsc --noEmit",
     "preview": "vite preview --host 0.0.0.0 --port 4173",
     "verify": "node tools/verify.mjs",
-    "ci": "npm run wasm && npm run typecheck && npm run build && npm run verify"
+    "verify:art": "node tools/artcheck.mjs",
+    "test:headless": "node tools/headless.mjs",
+    "ci": "npm run wasm && npm run typecheck && npm run build && npm run verify && npm run test:headless"
   },
   "devDependencies": {
     "assemblyscript": "^0.28.20",

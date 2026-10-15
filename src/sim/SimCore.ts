@@ -71,6 +71,7 @@ interface SimExports {
   simNoise2: (x: number, y: number, seed: number) => number;
   simFbm2: (x: number, y: number, octaves: number, seed: number) => number;
   simRandom: () => number;
+  simFxRandom: () => number;
 }
 
 export class SimCore {
@@ -283,8 +284,20 @@ export class SimCore {
     return this.exports.simElapsed();
   }
 
+  /**
+   * World stream: gameplay randomness. Draining this changes the level, so it
+   * is reserved for chunk authoring (spin, sway, variants).
+   */
   random(): number {
     return this.exports.simRandom();
+  }
+
+  /**
+   * FX stream: cosmetic randomness. Safe to drain at any rate - particle churn
+   * can never re-author the world, so a seed always replays the same run.
+   */
+  fxRandom(): number {
+    return this.exports.simFxRandom();
   }
 
   noise2(x: number, y: number, seed = 0): number {

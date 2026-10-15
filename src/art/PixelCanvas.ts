@@ -362,7 +362,7 @@ export class PixelCanvas {
 
   clear(): void {
     this.rgba.fill(0);
-    this.height.fill(0);
-    this.glow.fill(0);
+    this.heightMap.fill(0);
+    this.glowMap.fill(0);
   }
 }

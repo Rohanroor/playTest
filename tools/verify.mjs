@@ -161,6 +161,37 @@ function chunkFingerprint(idx) {
 }
 check("same seed => same chunk", chunkFingerprint(17) === chunkFingerprint(17));
 
+// Particles, bursts and host-side cosmetic dice run on a separate FX stream, so
+// no amount of visual churn may re-author the level. (Weather shares the world
+// stream on purpose: it is stepped at a fixed 60 Hz and is part of the timeline
+// a seed replays.)
+function fingerprintWithChurn(idx, churn) {
+  e.simInit(4242);
+  if (churn) {
+    for (let i = 0; i < 500; i++) e.simFxRandom();
+    for (let i = 0; i < 900; i++) e.simParticlesStep(1 / 60, 1, 0.5625, 0.9, 0.2, 1, 0.6, 0.3, 0.05, 0.8, 0.2);
+    for (let i = 0; i < 40; i++) e.simEmitBurst(0.5, 0.3, 30, 3, 1.0, 1.2, 0.6, 0.01);
+    for (let i = 0; i < 500; i++) e.simFxRandom();
+  }
+  e.simGenerateChunk(idx, 0.5, 0.3, 0.5, 0.2);
+  const n = e.simObstacleCount();
+  const buf = new Float32Array(mem(), e.obstaclePtr(), n * e.obstacleStride());
+  return Array.from(buf).map((v) => v.toFixed(6)).join("|");
+}
+check("cosmetic churn cannot re-author the world", fingerprintWithChurn(23, false) === fingerprintWithChurn(23, true));
+
+const fxDice = [];
+e.simInit(5150);
+for (let i = 0; i < 5; i++) fxDice.push(e.simFxRandom());
+check(
+  "fx stream is seeded and varied",
+  fxDice.every((v) => v >= 0 && v < 1) && new Set(fxDice.map((v) => v.toFixed(6))).size === 5,
+  `(${fxDice.slice(0, 3).map((v) => v.toFixed(4)).join(", ")} ...)`,
+);
+e.simInit(5150);
+const worldDice = [e.simRandom(), e.simRandom()];
+check("world and fx streams are decorrelated", Math.abs(worldDice[0] - fxDice[0]) > 1e-6 && Math.abs(worldDice[1] - fxDice[1]) > 1e-6);
+
 // --- particles --------------------------------------------------------------
 e.simInit(99);
 e.simForceWeather(3); // thunderstorm
@@ -192,6 +223,15 @@ if (existsSync(join(root, "dist"))) {
   const distFiles = statSync(join(root, "dist"));
   check("dist built", distFiles.isDirectory(), `(${(statSync(join(root, "dist", "index.html")).size / 1024).toFixed(1)} KB index.html)`);
   check("dist contains wasm", existsSync(join(root, "dist", "wasm", "sim.wasm")));
+}
+
+// --- art pipeline (baked headlessly: sprites, normals, atlas, typeface) -----
+console.log("\n[art]");
+try {
+  const { runArtChecks } = await import("./artcheck.mjs");
+  await runArtChecks({ check, root });
+} catch (err) {
+  check("art pipeline runs", false, `(${err instanceof Error ? err.message : String(err)})`);
 }
 
 console.log(`\n${failures === 0 ? "PASS" : "FAIL"}  ${checks - failures}/${checks} checks passed`);

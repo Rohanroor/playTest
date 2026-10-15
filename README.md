@@ -23,7 +23,7 @@ The brief asked for a recommendation between Godot 4, Three.js and Rust/Bevy for
 | **Godot 4** | ✅ `CanvasItem` + `PointLight2D`/normal maps | ❌ Glow is **3D-only**; 2D needs a `SubViewport` hack | ⚠️ shader-only, no cheap raymarch hooks | ~35–45 MB `.wasm` + slow first paint | Great editor, wrong lighting model for this brief |
 | **Three.js** | ⚠️ it is a 3D engine; 2.5D sprites = camera-locked quads | ✅ | ✅ | ~600 KB JS, **not WASM-first** | Over-general; pixel-art snapping and atlasing fight you |
 | **Rust + Bevy** | ✅ full control | ✅ | ✅ | 3–8 MB, needs nightly-ish toolchains & a long CI | Best *ceiling*, heaviest iteration loop for a web jam-scale build |
-| **This: TS + WebGL2 + WASM core** | ✅ per-sprite tangent-space normals from generated height fields | ✅ half-float HDR chain, 3-mip gaussian | ✅ 7-step march with sun/lightning in-scatter | **19 KB** sim core + ~60 KB JS | Full shader control, instant CI, tiny payload |
+| **This: TS + WebGL2 + WASM core** | ✅ per-sprite tangent-space normals from generated height fields | ✅ half-float HDR chain, 3-mip gaussian | ✅ 7-step march with sun/lightning in-scatter | **19.5 KB** sim core + **40 KB** gzipped JS | Full shader control, instant CI, tiny payload |
 
 **Reasoning.** The look in the GDD — *normal-mapped pixel art + bloom +
 volumetric fog + smooth dynamic shadows* — is a **rendering-pipeline** problem,
@@ -59,14 +59,20 @@ npm run dev      # http://localhost:5173
 ```
 
 ```bash
-npm run ci       # wasm + typecheck + build + headless verification (what CI runs)
-npm run verify   # simulation invariants only
-npm run preview  # serve the production build
+npm run ci             # wasm + typecheck + build + verify + headless play-through (what CI runs)
+npm run verify         # simulation, art and asset invariants
+npm run test:headless  # boots the real game against a mock WebGL2 and plays it
+npm run preview        # serve the production build
 ```
 
 **Controls** — `← →` / `A D` / drag to steer · `Space`/`Enter`/tap to launch ·
 `P` pause · `R` relaunch · `M` mute · `` ` `` dev HUD · `W` force the next
 weather state.
+
+**URL parameters** — `?seed=1234` replay a deterministic run (identical world,
+weather and visuals) · `?weather=calm|cloudy|windy|storm` force the opening
+state · `?day=0.75` force the time of day (0.75 = midnight) · `?hud=1` show the
+dev overlay (fps, sim/render ms, pools, weather, corridor).
 
 ---
 
@@ -117,6 +123,12 @@ weather state.
   conservative player speed: **400/400 survivable**.
 - Object pools everywhere (`src/entities/Pools.ts`) with an index free-list —
   steady-state play allocates nothing, on either side of the WASM boundary.
+- **Two RNG streams, one seed.** A *world* stream drives chunk authoring and
+  weather timing and is drained only by fixed-timestep simulation; an isolated
+  *fx* stream absorbs particle churn and cosmetic host dice
+  (`src/core/Random.ts`). Draining the fx stream can therefore never
+  re-author the level, and `?seed=` replays a run bit-for-bit — asserted by
+  both harnesses.
 
 ### 4. Weather & time of day (in WASM)
 - A keyframed palette table: warm morning → harsh midday → purple/orange dusk →
@@ -151,7 +163,7 @@ burner whooshes, thunder with a sub-body thump, impacts and UI blips.
 ```
 wasm/assembly/          WebAssembly simulation core (AssemblyScript)
   layout.ts             memory contract (mirrored + version-asserted)
-  math.ts               xorshift RNG, hashed value noise, fbm, damping
+  math.ts               world + fx xorshift streams, hashed value noise, fbm
   weather.ts            day/night palette + weather state machine
   chunks.ts             chunk generation + provably-fair corridor
   particles.ts          3072-particle pool, swap-remove compaction
@@ -159,7 +171,8 @@ wasm/assembly/          WebAssembly simulation core (AssemblyScript)
 
 src/
   sim/                  SimCore.ts (loader, zero-copy views) + layout.ts
-  core/                 Time (fixed 60 Hz), Input, Storage, Audio
+  core/                 Time (fixed 60 Hz), Input, Storage, Audio, Random
+  main.ts               boot: progress overlay, URL parameters, error surface
   art/                  PixelCanvas, NormalMap, Atlas, Sprites, Font
   render/               GL, RenderTarget, SpriteBatch, Camera, Pipeline, shaders
   systems/              PlayerController, ProceduralGenManager, ParallaxManager,
@@ -167,9 +180,28 @@ src/
                         ParticleManager
   entities/             Pools (Obstacle, Decor)
   flow/                 Game (state machine + frame loop)
-tools/verify.mjs        headless simulation invariants
-.github/workflows/      build → typecheck → verify → GitHub Pages deploy
+tools/
+  verify.mjs            simulation + art + asset invariants (39 checks)
+  artcheck.mjs          bakes the atlas headlessly, proves every sprite name,
+                        entity id and glyph resolves (10 checks)
+  headless.mjs          boots the real game against a mock DOM/WebGL2 and plays
+                        it for ~60 s: flow, controls, collisions, soak, leak and
+                        determinism checks (60 checks)
+.github/workflows/      build → typecheck → verify → play → GitHub Pages deploy
 ```
+
+## Testing
+
+There is no browser in CI, so the game is verified three ways in Node instead:
+
+| harness | what it proves |
+| --- | --- |
+| `npm run verify` | the WASM core: 400 chunks are flood-fill survivable, pools never overflow, weather visits all four states, lightning/thunder fire, particles stay finite, **and** cosmetic churn cannot re-author a seeded world |
+| `npm run verify:art` | the generated art: the atlas bakes, every sprite name / entity id / bitmap-font glyph the code asks for actually exists, normal maps carry relief, 16 sprites glow |
+| `npm run test:headless` | the assembled game: it boots, the ABI matches the binary, title → launch → play → pause → gameover → restart all work, steering and wind fight each other correctly, collisions cost exactly one life, a 40 s soak leaks nothing (WASM memory flat, zero dropped spawns), no NaN ever reaches a vertex buffer or a uniform, every uniform name exists in the shader it is set on, and two runs of one seed produce identical traces |
+
+Together that is 109 automated checks; `npm run ci` runs all of them plus
+typecheck and the production build.
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the data-flow diagram,
 the frame budget and the WASM ABI.
@@ -177,10 +209,14 @@ the frame budget and the WASM ABI.
 ## CI/CD
 
 `.github/workflows/ci.yml` runs on every push and PR:
-`npm ci` → compile WASM → `tsc --noEmit` → `vite build` → headless verification
-of the simulation invariants, then publishes `dist/` to **GitHub Pages**
-(`main` only). No binary assets are committed; the `.wasm` is rebuilt from
-source on every run.
+`npm ci` → compile WASM → `tsc --noEmit` → `vite build` → verify the simulation,
+art and asset invariants → **play the game headlessly** against a mock WebGL2,
+then publishes `dist/` to **GitHub Pages** (`main` only). No binary assets are
+committed; the `.wasm` is rebuilt from source on every run.
+
+Once this branch is merged, the game is live at
+`https://rohanroor.github.io/playTest/` (the build uses relative paths, so any
+static host works).
 
 ## Checklist
 
@@ -188,5 +224,8 @@ source on every run.
 - [x] Renderer: instanced normal-mapped sprite batch, sky, volumetric fog, bloom, grade
 - [x] Procedural art pipeline: sprites, height→normal, atlas, bitmap font
 - [x] Systems: player, procedural generation, parallax, weather/time, collision, UI
-- [x] CI/CD: build, typecheck, verify, GitHub Pages deploy
-- [ ] Final wiring: `flow/Game.ts`, `main.ts`, `ParticleManager.ts` (in progress on this branch)
+- [x] Flow: `flow/Game.ts` state machine + fixed-timestep loop, `main.ts` boot
+- [x] ParticleManager: velocity-aligned rain, additive sparks/embers/motes, depth parallax
+- [x] Test harnesses: simulation invariants, headless art bake, mock-WebGL2 play-through
+- [x] CI/CD: build, typecheck, verify, headless play-through, GitHub Pages deploy
+- [x] Determinism: split world/fx RNG streams, seeded host dice, `?seed=` replay

@@ -81,6 +81,21 @@ export class UIManager {
   }
 
   /** Draw a string. align: 0 left, 0.5 centre, 1 right. */
+  /** Reused per glyph: text is drawn twice per string (shadow + face). */
+  private readonly glyphRegion: AtlasRegion = {
+    name: "font-glyph",
+    u0: 0,
+    v0: 0,
+    u1: 0,
+    v1: 0,
+    w: 5,
+    h: 7,
+    x: 0,
+    y: 0,
+    pivotX: 0,
+    pivotY: 0,
+  };
+
   private text(
     batch: SpriteBatch,
     str: string,
@@ -110,8 +125,13 @@ export class UIManager {
         if (ch === " ") continue;
         const g = this.font.glyph(ch);
         if (!g) continue;
+        const r = this.glyphRegion;
+        r.u0 = g.u0;
+        r.v0 = g.v0;
+        r.u1 = g.u1;
+        r.v1 = g.v1;
         batch.push(
-          { name: "font-glyph", u0: g.u0, v0: g.v0, u1: g.u1, v1: g.v1, w: 5, h: 7, x: 0, y: 0, pivotX: 0, pivotY: 0 } as AtlasRegion,
+          r,
           startX + i * cellW + (isShadow ? shadowOff : 0),
           y + (isShadow ? shadowOff : 0),
           glyphW,

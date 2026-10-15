@@ -239,7 +239,7 @@ export class Pipeline {
     prog.set("uSunDir", p.sunDir);
     prog.set("uAspect", [this.w / this.h, 1]);
     prog.set("uHeightBias", p.heightBias);
-    prog.setInt("uSrc", 0);
+    // No sampler here: haze is blended over the scene already in the target.
     this.gl2.drawFullscreen();
   }
 
@@ -364,7 +364,7 @@ export class Pipeline {
   }
 }
 
-function canvasSize(canvas: HTMLCanvasElement, w: number, h: number): void {
+function canvasSize(canvas: HTMLCanvasElement | OffscreenCanvas, w: number, h: number): void {
   if (canvas.width !== w) canvas.width = Math.max(1, w);
   if (canvas.height !== h) canvas.height = Math.max(1, h);
 }

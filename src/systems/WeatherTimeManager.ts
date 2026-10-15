@@ -16,6 +16,7 @@ import type { SimCore } from "../sim/SimCore";
 import { W, WEATHER_STATE, WEATHER_STATE_NAME } from "../sim/layout";
 import type { CompositeParams, FogParams, LightRig, SkyParams } from "../render/Pipeline";
 import { PARTICLE } from "../sim/layout";
+import { hostRng } from "../core/Random";
 
 /** Full day/night cycle in seconds. Long enough to feel like weather, short
  *  enough that a good run sees dusk and the lantern-lit night. */
@@ -184,11 +185,11 @@ export class WeatherTimeManager {
       this.lastThunderCount = thunderCount;
       for (let i = 0; i < strikes; i++) {
         // Distance drives both the delay and how much low end survives.
-        const distance = 0.15 + Math.random() * 0.85;
+        const distance = 0.15 + hostRng.next() * 0.85;
         this.pendingThunder.push({ t: 0.25 + distance * 2.6, distance });
       }
       this.strikeFrame = true;
-      this.strikeX = clamp01(0.1 + Math.random() * 0.8);
+      this.strikeX = clamp01(0.1 + hostRng.next() * 0.8);
     }
     // Timers tick here; `takeThunder()` drains the ones that came due.
     for (let i = 0; i < this.pendingThunder.length; i++) this.pendingThunder[i].t -= dt;

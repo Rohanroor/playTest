@@ -9,6 +9,8 @@
  *   - the accumulated world scroll used by every parallax layer
  */
 
+import { hostRng } from "../core/Random";
+
 export interface CameraState {
   offsetX: number;
   offsetY: number;
@@ -86,7 +88,7 @@ export class Camera {
     this.shakeMag = Math.min(0.05, Math.max(this.shakeMag, magnitude));
     this.shakeDuration = Math.max(this.shakeDuration * (this.shakeTime / this.shakeDuration), duration);
     this.shakeTime = duration;
-    this.shakeSeed = Math.random() * 100;
+    this.shakeSeed = hostRng.next() * 100;
   }
 
   setLean(target: number): void {

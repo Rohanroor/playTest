@@ -8,25 +8,56 @@
 
 export const TAU: f32 = 6.28318530718;
 
-let rngState: u32 = 0x9e3779b9;
+// ---------------------------------------------------------------------------
+// Two independent xorshift32 streams.
+//
+//   world - the gameplay authority: chunk authoring, weather timing, lightning
+//           scheduling. It is drained only by fixed-timestep simulation code,
+//           so a given seed always replays the same level.
+//   fx    - cosmetic churn: particle jitter, burst velocities, band decor. How
+//           much of it happens depends on frame pacing and host-side dice, so
+//           it is deliberately isolated: a busy particle system can never shift
+//           the world stream and quietly re-author the level.
+// ---------------------------------------------------------------------------
+
+let worldState: u32 = 0x9e3779b9;
+let fxState: u32 = 0x85ebca6b;
+
+/** Decorrelate two streams from one seed (finaliser of a MurmurHash3). */
+function mix32(seed: u32, salt: u32): u32 {
+  let h: u32 = seed ^ salt;
+  h = (h ^ (h >>> 16)) * 2246822519;
+  h = (h ^ (h >>> 13)) * 3266489917;
+  h = h ^ (h >>> 16);
+  return h == 0 ? salt : h;
+}
+
+function xorshift32(x: u32): u32 {
+  let v = x;
+  v ^= v << 13;
+  v ^= v >>> 17;
+  v ^= v << 5;
+  return v;
+}
 
 export function seedRng(seed: u32): void {
-  rngState = seed == 0 ? 0x9e3779b9 : seed;
-  // Warm the generator so the first draws are well distributed.
-  for (let i = 0; i < 12; i++) nextU32();
+  const s: u32 = seed == 0 ? 0x9e3779b9 : seed;
+  worldState = mix32(s, 0x9e3779b9);
+  fxState = mix32(s, 0x85ebca6b);
+  // Warm both generators so the first draws are well distributed.
+  for (let i = 0; i < 12; i++) {
+    worldState = xorshift32(worldState);
+    fxState = xorshift32(fxState);
+  }
 }
 
-/** xorshift32 - fast, tiny, good enough for gameplay randomness. */
+/** World stream: gameplay-random. */
 export function nextU32(): u32 {
-  let x = rngState;
-  x ^= x << 13;
-  x ^= x >>> 17;
-  x ^= x << 5;
-  rngState = x;
-  return x;
+  worldState = xorshift32(worldState);
+  return worldState;
 }
 
-/** Uniform float in [0,1). */
+/** Uniform float in [0,1) from the world stream. */
 export function nextF32(): f32 {
   return f32(nextU32() >>> 8) * (1.0 / 16777216.0);
 }
@@ -42,6 +73,20 @@ export function chance(p: f32): bool {
 export function pickI32(n: i32): i32 {
   if (n <= 1) return 0;
   return i32(nextF32() * f32(n)) % n;
+}
+
+/** FX stream: cosmetic-random, safe to drain at any rate. */
+export function fxNextU32(): u32 {
+  fxState = xorshift32(fxState);
+  return fxState;
+}
+
+export function fxNextF32(): f32 {
+  return f32(fxNextU32() >>> 8) * (1.0 / 16777216.0);
+}
+
+export function fxRangeF32(a: f32, b: f32): f32 {
+  return a + (b - a) * fxNextF32();
 }
 
 // ---------------------------------------------------------------------------

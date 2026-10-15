@@ -11,7 +11,8 @@ export class RenderTarget {
   texture: WebGLTexture;
   width: number;
   height: number;
-  readonly hdr: boolean;
+  /** False when the driver rejected RGBA16F and we fell back to 8-bit. */
+  hdr: boolean;
 
   private constructor(gl: WebGL2RenderingContext, owner: GL, width: number, height: number, hdr: boolean) {
     this.gl = gl;
@@ -34,6 +35,7 @@ export class RenderTarget {
       // Some drivers refuse RGBA16F attachments: fall back to 8-bit and let the
       // composite pass compensate with a lower bloom threshold.
       gl.deleteTexture(this.texture);
+      this.hdr = false;
       this.texture = owner.texture(null, this.width, this.height, { nearest: true });
       gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
       gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.texture, 0);

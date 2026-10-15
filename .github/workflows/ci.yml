@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build · typecheck · verify WASM core
+    name: Build · typecheck · verify · play headlessly
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,8 +40,11 @@ jobs:
       - name: Build web bundle
         run: npm run build
 
-      - name: Verify simulation invariants (headless)
+      - name: Verify simulation, art and asset invariants (headless)
         run: npm run verify
+
+      - name: Play the game headlessly (mock DOM + WebGL2 integration test)
+        run: npm run test:headless
 
       - name: Report artifact sizes
         run: |

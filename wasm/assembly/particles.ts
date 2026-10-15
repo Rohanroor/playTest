@@ -10,7 +10,7 @@
  * nothing, which is exactly what an infinite WASM run needs.
  */
 
-import { clampf, nextF32, rangeF32, saturate, TAU } from "./math";
+import { clampf, fxNextF32, fxRangeF32, saturate, TAU } from "./math";
 import {
   MAX_PARTICLES,
   P_ALPHA,
@@ -86,7 +86,7 @@ function spawn(
   particles[o + P_ROT] = rot;
   particles[o + P_ALPHA] = alpha;
   particles[o + P_DEPTH] = depth;
-  particles[o + P_SEED] = nextF32() * 1000.0;
+  particles[o + P_SEED] = fxNextF32() * 1000.0;
   alive++;
 }
 
@@ -94,12 +94,12 @@ function spawn(
 export function emitBurst(x: f32, y: f32, count: i32, type: f32, spread: f32, speed: f32, life: f32, size: f32): void {
   for (let i = 0; i < count; i++) {
     if (alive >= MAX_PARTICLES) return;
-    const a = nextF32() * TAU;
-    const s: f32 = speed * (0.35 + nextF32() * 0.9);
+    const a = fxNextF32() * TAU;
+    const s: f32 = speed * (0.35 + fxNextF32() * 0.9);
     const vx = Mathf.cos(a) * s * spread;
     const vy = Mathf.sin(a) * s * spread;
-    const l: f32 = life * (0.55 + nextF32() * 0.7);
-    spawn(type, x + (nextF32() - 0.5) * 0.04, y + (nextF32() - 0.5) * 0.04, vx, vy, l, size * (0.6 + nextF32() * 0.8), 1.0, 1.0, nextF32() * TAU);
+    const l: f32 = life * (0.55 + fxNextF32() * 0.7);
+    spawn(type, x + (fxNextF32() - 0.5) * 0.04, y + (fxNextF32() - 0.5) * 0.04, vx, vy, l, size * (0.6 + fxNextF32() * 0.8), 1.0, 1.0, fxNextF32() * TAU);
   }
 }
 
@@ -160,16 +160,16 @@ export function particlesStep(
   while (rainAcc >= 1.0) {
     rainAcc -= 1.0;
     if (alive >= MAX_PARTICLES) break;
-    const depth: f32 = rangeF32(0.55, 2.1);
-    const speed: f32 = (0.85 + depth * 0.4) * rangeF32(0.9, 1.2);
+    const depth: f32 = fxRangeF32(0.55, 2.1);
+    const speed: f32 = (0.85 + depth * 0.4) * fxRangeF32(0.9, 1.2);
     spawn(
       PT_RAIN,
-      rangeF32(-0.15, viewW + 0.15) - windPush * depth * 0.06,
-      rangeF32(-0.25, -0.01),
+      fxRangeF32(-0.15, viewW + 0.15) - windPush * depth * 0.06,
+      fxRangeF32(-0.25, -0.01),
       windPush * (0.35 + depth * 0.3),
       speed,
-      rangeF32(0.7, 1.6),
-      rangeF32(0.004, 0.011) * (0.6 + depth * 0.4),
+      fxRangeF32(0.7, 1.6),
+      fxRangeF32(0.004, 0.011) * (0.6 + depth * 0.4),
       depth,
       1.0,
       0.0,
@@ -179,34 +179,34 @@ export function particlesStep(
   while (mistAcc >= 1.0) {
     mistAcc -= 1.0;
     if (alive >= MAX_PARTICLES) break;
-    const depth: f32 = rangeF32(0.25, 1.25);
+    const depth: f32 = fxRangeF32(0.25, 1.25);
     spawn(
       PT_MIST,
-      rangeF32(-0.3, viewW + 0.3),
-      rangeF32(-0.3, viewH + 0.3),
-      windPush * depth * 0.12 + rangeF32(-0.03, 0.03),
-      scroll * depth * 0.55 + rangeF32(-0.02, 0.02),
-      rangeF32(4.0, 9.0),
-      rangeF32(0.08, 0.34),
+      fxRangeF32(-0.3, viewW + 0.3),
+      fxRangeF32(-0.3, viewH + 0.3),
+      windPush * depth * 0.12 + fxRangeF32(-0.03, 0.03),
+      scroll * depth * 0.55 + fxRangeF32(-0.02, 0.02),
+      fxRangeF32(4.0, 9.0),
+      fxRangeF32(0.08, 0.34),
       depth,
       1.0,
-      nextF32() * TAU,
+      fxNextF32() * TAU,
     );
   }
 
   while (streakAcc >= 1.0) {
     streakAcc -= 1.0;
     if (alive >= MAX_PARTICLES) break;
-    const depth: f32 = rangeF32(0.9, 2.3);
+    const depth: f32 = fxRangeF32(0.9, 2.3);
     const fromLeft: bool = windPush > 0.0;
     spawn(
       PT_WIND_STREAK,
       fromLeft ? -0.25 : viewW + 0.25,
-      rangeF32(-0.05, viewH + 0.05),
+      fxRangeF32(-0.05, viewH + 0.05),
       windPush * (0.7 + depth * 0.6),
-      scroll * depth * 0.7 + rangeF32(-0.05, 0.05),
-      rangeF32(0.4, 1.1),
-      rangeF32(0.05, 0.18),
+      scroll * depth * 0.7 + fxRangeF32(-0.05, 0.05),
+      fxRangeF32(0.4, 1.1),
+      fxRangeF32(0.05, 0.18),
       depth,
       1.0,
       0.0,
@@ -216,18 +216,18 @@ export function particlesStep(
   while (dustAcc >= 1.0) {
     dustAcc -= 1.0;
     if (alive >= MAX_PARTICLES) break;
-    const depth: f32 = rangeF32(0.8, 1.4);
+    const depth: f32 = fxRangeF32(0.8, 1.4);
     spawn(
       PT_DUST,
-      rangeF32(-0.05, viewW + 0.05),
-      rangeF32(-0.05, viewH + 0.05),
-      windPush * depth * 0.2 + rangeF32(-0.02, 0.02),
-      scroll * depth + rangeF32(-0.03, 0.01),
-      rangeF32(2.5, 6.0),
-      rangeF32(0.004, 0.014),
+      fxRangeF32(-0.05, viewW + 0.05),
+      fxRangeF32(-0.05, viewH + 0.05),
+      windPush * depth * 0.2 + fxRangeF32(-0.02, 0.02),
+      scroll * depth + fxRangeF32(-0.03, 0.01),
+      fxRangeF32(2.5, 6.0),
+      fxRangeF32(0.004, 0.014),
       depth,
       1.0,
-      nextF32() * TAU,
+      fxNextF32() * TAU,
     );
   }
 
@@ -236,15 +236,15 @@ export function particlesStep(
     if (alive >= MAX_PARTICLES) break;
     spawn(
       PT_GLOW_MOTE,
-      rangeF32(-0.05, viewW + 0.05),
-      rangeF32(0.0, viewH + 0.1),
-      windPush * 0.1 + rangeF32(-0.015, 0.015),
-      scroll * 0.9 - rangeF32(0.02, 0.09),
-      rangeF32(3.0, 7.0),
-      rangeF32(0.005, 0.02),
-      rangeF32(0.9, 1.3),
+      fxRangeF32(-0.05, viewW + 0.05),
+      fxRangeF32(0.0, viewH + 0.1),
+      windPush * 0.1 + fxRangeF32(-0.015, 0.015),
+      scroll * 0.9 - fxRangeF32(0.02, 0.09),
+      fxRangeF32(3.0, 7.0),
+      fxRangeF32(0.005, 0.02),
+      fxRangeF32(0.9, 1.3),
       1.0,
-      nextF32() * TAU,
+      fxNextF32() * TAU,
     );
   }
 

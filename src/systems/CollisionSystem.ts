@@ -11,7 +11,7 @@
  */
 
 import type { ObstaclePool } from "../entities/Pools";
-import type { PlayerController } from "./PlayerController";
+import { PlayerController } from "./PlayerController";
 
 export interface CollisionEvent {
   x: number;

@@ -10,7 +10,7 @@
  */
 
 import { LAYOUT_VERSION, DECOR_STRIDE, MAX_PARTICLES, OBSTACLE_STRIDE, PARTICLE_STRIDE, WEATHER_STRIDE } from "./layout";
-import { fbm2, nextF32, noise2, seedRng } from "./math";
+import { fbm2, fxNextF32, nextF32, noise2, seedRng } from "./math";
 import { CHUNK_HEIGHT, chunkDecorCount, chunkObstacleCount, corridorCenter, corridorHalfWidth, decorManifest, generateChunk, obstacleManifest } from "./chunks";
 import {
   consumeThunder,
@@ -159,6 +159,12 @@ export function simFbm2(x: f32, y: f32, octaves: i32, seed: u32): f32 {
   return fbm2(x, y, octaves, seed);
 }
 
+/** World stream: gameplay randomness (chunk spin, sway, decor variants). */
 export function simRandom(): f32 {
   return nextF32();
+}
+
+/** FX stream: cosmetic randomness the host may drain at any rate. */
+export function simFxRandom(): f32 {
+  return fxNextF32();
 }

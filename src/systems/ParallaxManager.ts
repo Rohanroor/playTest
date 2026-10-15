@@ -111,13 +111,13 @@ export class ParallaxManager {
   }
 
   private pickSprite(band: Band, type?: number, variant?: number): string {
-    let t = DECOR.MOUNTAIN_FAR;
+    let t: number = DECOR.MOUNTAIN_FAR;
     if (band.name === "stars") t = DECOR.STARFIELD;
     else if (band.name === "mountains") t = type === DECOR.ROCK_SPIRE ? DECOR.ROCK_SPIRE : DECOR.MOUNTAIN_FAR;
     else if (band.name === "hazeClouds") t = DECOR.CLOUD;
     else if (band.name === "ridge") t = DECOR.RIDGE_FOREST;
     const list = DECOR_SPRITES[t] ?? DECOR_SPRITES[DECOR.CLOUD];
-    const idx = (variant ?? Math.floor(this.sim.random() * list.length)) % list.length;
+    const idx = (variant ?? Math.floor(this.sim.fxRandom() * list.length)) % list.length;
     return list[idx];
   }
 
@@ -128,15 +128,15 @@ export class ParallaxManager {
     // Distribute slots evenly with jitter so the band never looks tiled.
     const spread = band.spacing * band.slots.length;
     slot.y = initial
-      ? -viewH * 0.2 + (index / band.slots.length) * spread - spread * 0.5 + this.sim.random() * band.spacing * 0.4
-      : -band.margin - this.sim.random() * band.spacing * 0.7;
-    slot.x = offered ? clamp01(offered.x) : this.sim.random() * 1.3 - 0.15;
-    const baseScale = offered ? offered.scale : 0.8 + this.sim.random() * 1.1;
+      ? -viewH * 0.2 + (index / band.slots.length) * spread - spread * 0.5 + this.sim.fxRandom() * band.spacing * 0.4
+      : -band.margin - this.sim.fxRandom() * band.spacing * 0.7;
+    slot.x = offered ? clamp01(offered.x) : this.sim.fxRandom() * 1.3 - 0.15;
+    const baseScale = offered ? offered.scale : 0.8 + this.sim.fxRandom() * 1.1;
     // Convert atlas pixels into world units at a constant pixel density, so
     // every sprite in the game shares one texel size.
     slot.scale = (region.h * PIXEL_DENSITY * baseScale) / this.pixelsPerWorldUnit;
-    slot.tint = offered ? offered.tint : Math.floor(this.sim.random() * 3);
-    slot.flip = this.sim.random() < 0.5;
+    slot.tint = offered ? offered.tint : Math.floor(this.sim.fxRandom() * 3);
+    slot.flip = this.sim.fxRandom() < 0.5;
     slot.alpha = 1;
   }
 
